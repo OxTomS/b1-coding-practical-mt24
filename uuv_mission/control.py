@@ -9,7 +9,7 @@ class controller:
         self.kp = 0.15  # Proportional gain
         self.kd = 0.6  # Derivative gain
         self.prev_error = 0  # Store previous error for derivative term
-        self.dt = 0.1  # Time step (can be adjusted as needed)
+        self.dt = 1  # Time step (can be adjusted as needed)
 
     def compute_control(self, reference, current_state, current_velocity):
         """
