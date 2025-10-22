@@ -86,11 +86,7 @@ class Mission:
 class ClosedLoop:
     def __init__(self, plant: Submarine, controller):
         self.plant = plant
-        # Accept either a controller class or an instance; instantiate if a class was passed
-        if isinstance(controller, type):
-            self.controller = controller()
-        else:
-            self.controller = controller
+        self.controller = controller
 
     def simulate(self,  mission: Mission, disturbances: np.ndarray) -> Trajectory:
 
@@ -102,41 +98,10 @@ class ClosedLoop:
         actions = np.zeros(T)
         self.plant.reset_state()
 
-        # align controller timestep if attribute exists
-        if hasattr(self.controller, "dt"):
-            try:
-                self.controller.dt = self.plant.dt
-            except Exception:
-                pass
-
-        # reset controller if it provides a reset method
-        if hasattr(self.controller, "reset"):
-            try:
-                self.controller.reset()
-            except Exception:
-                pass
-
         for t in range(T):
-            # record current position before applying action
             positions[t] = self.plant.get_position()
             observation_t = self.plant.get_depth()
-
-            # estimate desired velocity from mission reference (finite difference)
-            if t == 0:
-                ref_vel = 0.0
-            else:
-                ref_vel = (mission.reference[t] - mission.reference[t-1]) / self.plant.dt
-
-            # compute action using controller: pos & vel errors
-            actions[t] = self.controller.compute_control(
-                mission.reference[t],   # desired depth (position)
-                observation_t,          # current depth
-                self.plant.vel_y,       # current vertical velocity
-                reference_vel=ref_vel,  # desired vertical velocity
-                dt=self.plant.dt
-            )
-
-            # apply control and disturbance to plant
+            # Call your controller here
             self.plant.transition(actions[t], disturbances[t])
 
         return Trajectory(positions)
