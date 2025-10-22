@@ -1,40 +1,41 @@
 class controller:
-    def __init__(self):
-        """
-        Initialize PD controller with proportional and derivative gains
-        Args:
-            kp (float): Proportional gain
-            kd (float): Derivative gain
-        """
-        self.kp = 0.15  # Proportional gain
-        self.kd = 0.6  # Derivative gain
-        self.prev_error = 0  # Store previous error for derivative term
-        self.dt = 0.1  # Time step (can be adjusted as needed)
+    """
+    PD-style controller that uses position error (proportional) and velocity error (derivative-like).
+    control = Kp * (ref_pos - pos) + Kv * (ref_vel - vel)
+    """
+    def __init__(self, kp: float = 0.15, kv: float = 0.6, dt: float | None = None):
+        self.kp = kp
+        self.kv = kv
+        self.dt = dt
 
-    def compute_control(self, reference, current_state, current_velocity):
+    def compute_control(
+        self,
+        reference_pos: float,
+        current_pos: float,
+        current_vel: float,
+        reference_vel: float = 0.0,
+        dt: float | None = None
+    ) -> float:
         """
-        Compute control output using PD control law
-        Args:
-            reference (float): Desired setpoint
-            current_state (float): Current system state
-            current_velocity (float): Current system velocity
-        Returns:
-            float: Control output
+        Compute a control action to drive the submarine toward reference_pos and reference_vel.
+        - reference_pos: desired depth
+        - current_pos: measured depth
+        - current_vel: measured vertical velocity
+        - reference_vel: optional desired vertical velocity (default 0)
+        - dt: optional timestep (not required for this formulation but accepted)
+        Returns a scalar control action.
         """
-        # Calculate error
-        error = reference - current_state
-        
-        # Calculate error derivative (rate of change)
-        error_derivative = (error - self.prev_error) / self.dt
-        
-        # Store current error for next iteration
-        self.prev_error = error
-        
-        # PD control law: u = Kp*e + Kd*de/dt
-        control_output = self.kp * error + self.kd * error_derivative
-        
-        return control_output
+        # choose dt if needed for callers; not used in this simple law but accepted for compatibility
+        if dt is None:
+            dt = self.dt
+
+        pos_error = reference_pos - current_pos
+        vel_error = reference_vel - current_vel
+
+        # PD-like output: P on position error, D-like on velocity error
+        u = self.kp * pos_error + self.kv * vel_error
+        return float(u)
 
     def reset(self):
-        """Reset controller internal states"""
-        self.prev_error = 0
+        """No internal state required for this implementation, kept for API compatibility."""
+        return
