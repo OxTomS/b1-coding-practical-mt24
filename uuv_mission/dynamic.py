@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from .terrain import generate_reference_and_limits
-from .control import controller
 
 class Submarine:
     def __init__(self):
@@ -19,7 +18,6 @@ class Submarine:
         self.pos_y = 0
         self.vel_x = 1 # Constant velocity in x direction
         self.vel_y = 0
-
 
     def transition(self, action: float, disturbance: float):
         self.pos_x += self.vel_x * self.dt
@@ -88,7 +86,7 @@ class ClosedLoop:
         self.plant = plant
         self.controller = controller
 
-    def simulate(self,  mission: Mission, disturbances: np.ndarray) -> Trajectory:
+    def simulate(self, mission: Mission, disturbances: np.ndarray) -> Trajectory:
 
         T = len(mission.reference)
         if len(disturbances) < T:
@@ -97,11 +95,20 @@ class ClosedLoop:
         positions = np.zeros((T, 2))
         actions = np.zeros(T)
         self.plant.reset_state()
+        if hasattr(self.controller, 'reset'):
+            try:
+                self.controller.reset()
+            except TypeError:
+                pass
 
         for t in range(T):
-            positions[t] = self.plant.get_position()
             observation_t = self.plant.get_depth()
-            # Call your controller here
+            actions[t] = self.controller.compute_control(
+                mission.reference[t],
+                observation_t,
+                self.plant.vel_y
+            )
+            positions[t] = self.plant.get_position()
             self.plant.transition(actions[t], disturbances[t])
 
         return Trajectory(positions)
